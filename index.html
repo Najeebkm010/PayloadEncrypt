@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>JSON Encryption Tool</title>
+    <title>JSON Encryption/Decryption Tool</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jsencrypt/3.3.2/jsencrypt.min.js"></script>
     <style>
@@ -16,12 +16,13 @@
             color: black;
         }
 
-        h1 {
+        h1, h2 {
             font-size: 24px;
             margin-bottom: 30px;
         }
 
-        .container {
+        .section {
+            margin-bottom: 40px;
             display: flex;
             flex-direction: column;
             gap: 20px;
@@ -52,7 +53,7 @@
             opacity: 0.8;
         }
 
-        #result {
+        .result {
             font-family: monospace;
             white-space: pre-wrap;
             word-wrap: break-word;
@@ -67,18 +68,74 @@
             margin-top: 10px;
             display: none;
         }
+
+        .keys {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f0f8ff;
+            border: 1px solid #000;
+            display: none;
+            font-family: monospace;
+        }
+
+        .keys span {
+            display: block;
+            margin-top: 5px;
+            word-break: break-all;
+        }
+
+        .input-container {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #000;
+            font-family: monospace;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>JSON Encryption Tool</h1>
-        
+    <div class="section">
+        <h2>Encryption</h2>
         <textarea id="jsonInput" placeholder="Enter your JSON data here..."></textarea>
-        
         <button onclick="encryptData()">Encrypt</button>
-        
-        <div id="result"></div>
-        <div id="error" class="error"></div>
+        <div id="encryptionResult" class="result"></div>
+        <div id="keys" class="keys">
+            <strong>Secret Key:</strong> <span id="secretKey"></span>
+            <strong>IV:</strong> <span id="ivValue"></span>
+        </div>
+        <div id="encryptError" class="error"></div>
+    </div>
+
+    <div class="section">
+        <h2>Decryption</h2>
+        <textarea id="encryptedInput" placeholder="Enter the encrypted JSON here (kappaRmn value)..."></textarea>
+        <div class="input-container">
+            <div>
+                <label for="keyInput">Secret Key:</label>
+                <input type="text" id="keyInput" placeholder="Enter the secret key...">
+            </div>
+            <div>
+                <label for="ivInput">IV:</label>
+                <input type="text" id="ivInput" placeholder="Enter the IV...">
+            </div>
+        </div>
+        <button onclick="decryptData()">Decrypt</button>
+        <div id="decryptionResult" class="result"></div>
+        <div id="decryptError" class="error"></div>
     </div>
 
     <script>
@@ -117,25 +174,83 @@ gwIDAQAB
                 return {
                     alphaXyz: encryptedKey,
                     sigmaBlt: encryptedIv,
-                    kappaRmn: encryptedPayload
+                    kappaRmn: encryptedPayload,
+                    secretKey: aesKey.toString(CryptoJS.enc.Base64),
+                    iv: aesIv.toString(CryptoJS.enc.Base64)
                 };
             } catch (error) {
                 throw new Error('Encryption process encountered an error: ' + error.message);
             }
         }
 
+        function decryptJson(encryptedData, key, iv) {
+            try {
+                const decrypted = CryptoJS.AES.decrypt(encryptedData, 
+                    CryptoJS.enc.Base64.parse(key), {
+                        iv: CryptoJS.enc.Base64.parse(iv),
+                        mode: CryptoJS.mode.CBC,
+                        padding: CryptoJS.pad.Pkcs7
+                    }
+                );
+                
+                return JSON.parse(decrypted.toString(CryptoJS.enc.Utf8));
+            } catch (error) {
+                throw new Error('Decryption failed: ' + error.message);
+            }
+        }
+
         function encryptData() {
             const jsonInput = document.getElementById('jsonInput');
-            const resultDiv = document.getElementById('result');
-            const errorDiv = document.getElementById('error');
+            const resultDiv = document.getElementById('encryptionResult');
+            const errorDiv = document.getElementById('encryptError');
+            const keysDiv = document.getElementById('keys');
+            const secretKeySpan = document.getElementById('secretKey');
+            const ivSpan = document.getElementById('ivValue');
+
+            resultDiv.style.display = 'none';
+            errorDiv.style.display = 'none';
+            keysDiv.style.display = 'none';
+
+            try {
+                const data = JSON.parse(jsonInput.value);
+                const encrypted = newEncryptJson(data);
+                
+                // Display encrypted data
+                const displayData = {
+                    alphaXyz: encrypted.alphaXyz,
+                    sigmaBlt: encrypted.sigmaBlt,
+                    kappaRmn: encrypted.kappaRmn
+                };
+                resultDiv.textContent = JSON.stringify(displayData, null, 2);
+                resultDiv.style.display = 'block';
+
+                // Display keys
+                secretKeySpan.textContent = encrypted.secretKey;
+                ivSpan.textContent = encrypted.iv;
+                keysDiv.style.display = 'block';
+            } catch (error) {
+                errorDiv.textContent = error.message;
+                errorDiv.style.display = 'block';
+            }
+        }
+
+        function decryptData() {
+            const encryptedInput = document.getElementById('encryptedInput');
+            const keyInput = document.getElementById('keyInput');
+            const ivInput = document.getElementById('ivInput');
+            const resultDiv = document.getElementById('decryptionResult');
+            const errorDiv = document.getElementById('decryptError');
 
             resultDiv.style.display = 'none';
             errorDiv.style.display = 'none';
 
             try {
-                const data = JSON.parse(jsonInput.value);
-                const encrypted = newEncryptJson(data);
-                resultDiv.textContent = JSON.stringify(encrypted, null, 2);
+                const decrypted = decryptJson(
+                    encryptedInput.value,
+                    keyInput.value,
+                    ivInput.value
+                );
+                resultDiv.textContent = JSON.stringify(decrypted, null, 2);
                 resultDiv.style.display = 'block';
             } catch (error) {
                 errorDiv.textContent = error.message;

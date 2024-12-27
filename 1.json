@@ -1,0 +1,34 @@
+{
+    {
+        "email":"xikow98810@mowline.com",
+        "password":"Pass@123",
+        "phone":"0526341852",
+        "roleId":"644bb384502aeaf961f589ce",
+        "branchId":null,
+        "warehosIds":
+            ["64d7530fe1ba426fa5784357",
+            "64d7532ae1ba426fa578435e",
+            "64d7533ee1ba426fa5784363",
+            "644be2b8cb8c2020f78838db",
+            "644be293cb8c2020f78838ce",
+            "64b81fb5d8ccab5ea3eb3b86",
+            "64b81fc2d8ccab5ea3eb3b8b"
+            ],
+        "userType":1,
+        "loginFrom":"admin"
+    }
+
+    {
+        "pageLimit":20,
+        "page":1,
+        "status":2,
+        "apiType":"web"
+    }
+
+    {"email":"mesifi8838@edectus.com"}
+
+    {
+        "phone":+971562323569,
+        "otp":0000
+    }
+}
