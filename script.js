@@ -1,120 +1,83 @@
-// JSON Encryption/Decryption Tool
-function encryptJson(data) {
-    try {
-        const jsonData = JSON.stringify(data);
-        const aesKey = CryptoJS.lib.WordArray.random(16);
-        const aesIv = CryptoJS.lib.WordArray.random(16);
+const PUBLIC_KEY = `-----BEGIN PUBLIC KEY-----
+${process.env.PUBLIC_KEY}
+-----END PUBLIC KEY-----`;
 
-        const encryptedPayload = CryptoJS.AES.encrypt(jsonData, aesKey, {
-            iv: aesIv,
-            mode: CryptoJS.mode.CBC,
-            padding: CryptoJS.pad.Pkcs7
-        }).toString();
+const PRIVATE_KEY = `-----BEGIN PRIVATE KEY-----
+${process.env.PRIVATE_KEY}
+-----END PRIVATE KEY-----`;
 
-        const rsa = new JSEncrypt();
-        rsa.setPublicKey(CONFIG.PUBLIC_KEY);
+function newEncryptJson(data) {
+  const jsonData = JSON.stringify(data);
+  const aesKey = CryptoJS.lib.WordArray.random(16);
+  const aesIv = CryptoJS.lib.WordArray.random(16);
 
-        const encryptedKey = rsa.encrypt(aesKey.toString(CryptoJS.enc.Base64));
-        const encryptedIv = rsa.encrypt(aesIv.toString(CryptoJS.enc.Base64));
+  const encryptedPayload = CryptoJS.AES.encrypt(jsonData, aesKey, {
+    iv: aesIv,
+    mode: CryptoJS.mode.CBC,
+    padding: CryptoJS.pad.Pkcs7
+  }).toString();
 
-        if (!encryptedKey || !encryptedIv) {
-            throw new Error('RSA encryption failed.');
-        }
+  const rsa = new JSEncrypt();
+  rsa.setPublicKey(PUBLIC_KEY);
 
-        return {
-            alphaXyz: encryptedKey,
-            sigmaBlt: encryptedIv,
-            kappaRmn: encryptedPayload,
-            secretKey: aesKey.toString(CryptoJS.enc.Base64),
-            iv: aesIv.toString(CryptoJS.enc.Base64)
-        };
-    } catch (error) {
-        throw new Error('Encryption process encountered an error: ' + error.message);
-    }
-}
+  const encryptedKey = rsa.encrypt(aesKey.toString(CryptoJS.enc.Base64));
+  const encryptedIv = rsa.encrypt(aesIv.toString(CryptoJS.enc.Base64));
 
-function decryptJsonWithRSA(encryptedData) {
-    try {
-        const { alphaXyz, sigmaBlt, kappaRmn } = encryptedData;
+  if (!encryptedKey || !encryptedIv) throw new Error("RSA encryption failed.");
 
-        const rsa = new JSEncrypt();
-        rsa.setPrivateKey(CONFIG.PRIVATE_KEY);
-
-        const decryptedKeyBase64 = rsa.decrypt(alphaXyz);
-        const decryptedIvBase64 = rsa.decrypt(sigmaBlt);
-
-        if (!decryptedKeyBase64 || !decryptedIvBase64) {
-            throw new Error("RSA decryption failed. Please check the encrypted key/IV or private key.");
-        }
-
-        const decrypted = CryptoJS.AES.decrypt(kappaRmn, 
-            CryptoJS.enc.Base64.parse(decryptedKeyBase64), {
-                iv: CryptoJS.enc.Base64.parse(decryptedIvBase64),
-                mode: CryptoJS.mode.CBC,
-                padding: CryptoJS.pad.Pkcs7
-            }
-        );
-
-        const decryptedText = decrypted.toString(CryptoJS.enc.Utf8);
-        return JSON.parse(decryptedText);
-    } catch (err) {
-        throw new Error("Decryption failed: " + err.message);
-    }
+  return {
+    alphaXyz: encryptedKey,
+    sigmaBlt: encryptedIv,
+    kappaRmn: encryptedPayload,
+    secretKey: aesKey.toString(CryptoJS.enc.Base64),
+    iv: aesIv.toString(CryptoJS.enc.Base64)
+  };
 }
 
 function encryptData() {
-    const jsonInput = document.getElementById('jsonInput');
-    const resultDiv = document.getElementById('encryptionResult');
-    const errorDiv = document.getElementById('encryptError');
-    const keysDiv = document.getElementById('keys');
-    const secretKeySpan = document.getElementById('secretKey');
-    const ivSpan = document.getElementById('ivValue');
+  try {
+    const jsonInput = document.getElementById("jsonInput").value;
+    const resultDiv = document.getElementById("encryptionResult");
+    const errorDiv = document.getElementById("encryptError");
+    const keysDiv = document.getElementById("keys");
 
-    // Hide previous results
-    resultDiv.style.display = 'none';
-    errorDiv.style.display = 'none';
-    keysDiv.style.display = 'none';
+    const { alphaXyz, sigmaBlt, kappaRmn, secretKey, iv } = newEncryptJson(JSON.parse(jsonInput));
 
-    try {
-        const data = JSON.parse(jsonInput.value);
-        const encrypted = encryptJson(data);
-        
-        // Display encrypted data
-        const displayData = {
-            alphaXyz: encrypted.alphaXyz,
-            sigmaBlt: encrypted.sigmaBlt,
-            kappaRmn: encrypted.kappaRmn
-        };
-        resultDiv.textContent = JSON.stringify(displayData, null, 2);
-        resultDiv.style.display = 'block';
+    resultDiv.textContent = JSON.stringify({ alphaXyz, sigmaBlt, kappaRmn }, null, 2);
+    document.getElementById("secretKey").textContent = secretKey;
+    document.getElementById("ivValue").textContent = iv;
 
-        // Display keys
-        secretKeySpan.textContent = encrypted.secretKey;
-        ivSpan.textContent = encrypted.iv;
-        keysDiv.style.display = 'block';
-    } catch (error) {
-        errorDiv.textContent = error.message;
-        errorDiv.style.display = 'block';
-    }
+    resultDiv.style.display = keysDiv.style.display = "block";
+    errorDiv.style.display = "none";
+  } catch (err) {
+    document.getElementById("encryptError").textContent = err.message;
+    document.getElementById("encryptError").style.display = "block";
+  }
 }
 
 function decryptData() {
-    const encryptedInput = document.getElementById('encryptedInput');
-    const resultDiv = document.getElementById('decryptionResult');
-    const errorDiv = document.getElementById('decryptError');
+  try {
+    const encryptedData = JSON.parse(document.getElementById("encryptedInput").value);
+    const { alphaXyz, sigmaBlt, kappaRmn } = encryptedData;
 
-    // Hide previous results
-    resultDiv.style.display = 'none';
-    errorDiv.style.display = 'none';
+    const rsa = new JSEncrypt();
+    rsa.setPrivateKey(PRIVATE_KEY);
 
-    try {
-        const encryptedData = JSON.parse(encryptedInput.value);
-        const decrypted = decryptJsonWithRSA(encryptedData);
+    const key = rsa.decrypt(alphaXyz);
+    const iv = rsa.decrypt(sigmaBlt);
 
-        resultDiv.textContent = JSON.stringify(decrypted, null, 2);
-        resultDiv.style.display = 'block';
-    } catch (error) {
-        errorDiv.textContent = error.message;
-        errorDiv.style.display = 'block';
-    }
+    const decrypted = CryptoJS.AES.decrypt(kappaRmn, CryptoJS.enc.Base64.parse(key), {
+      iv: CryptoJS.enc.Base64.parse(iv),
+      mode: CryptoJS.mode.CBC,
+      padding: CryptoJS.pad.Pkcs7
+    });
+
+    const result = decrypted.toString(CryptoJS.enc.Utf8);
+    document.getElementById("decryptionResult").textContent = JSON.stringify(JSON.parse(result), null, 2);
+    document.getElementById("decryptionResult").style.display = "block";
+    document.getElementById("decryptError").style.display = "none";
+  } catch (err) {
+    document.getElementById("decryptError").textContent = err.message;
+    document.getElementById("decryptError").style.display = "block";
+  }
 }
