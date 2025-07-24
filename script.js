@@ -1,6 +1,6 @@
 // Fetch keys from environment variables via API endpoint
-let publicKey = 'process.env.PUBLIC_KEY';
-let privateKey = 'process.env.PRIVATE_KEY';
+let publicKey = '';
+let privateKey = '';
 
 // Initialize keys when page loads
 document.addEventListener('DOMContentLoaded', async function() {
